@@ -1,6 +1,6 @@
 {
   "id": "claude-sandbox",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "name": "Claude Code sandbox (default-deny egress + persistent auth)",
   "description": "Installs Claude Code, a default-deny egress firewall, and a persistent state volume, so that running the agent with --dangerously-skip-permissions has a bounded blast radius.",
   "documentationURL": "https://github.com/zlrth/devcontainer-features/tree/main/src/claude-sandbox",

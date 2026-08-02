@@ -83,6 +83,16 @@ split_into EXTRA_DOMAINS "${EXTRA_ALLOWED_DOMAINS:-}"
 
 echo "init-firewall: resolving allowlist before locking egress down"
 
+# On a user-defined Docker network — which is every docker-compose project, and
+# every `docker run --network` — resolv.conf points at Docker's embedded
+# resolver on 127.0.0.11, and that address answers only because of DNAT rules
+# in the nat table. The flush below removes them, so without this save the
+# resolution phase that follows has no DNS at all: every domain logs "no A
+# record", the ipset ends up empty, and the run dies on its own verification
+# step. Service names (`db`, `redis`) stop resolving for the container's whole
+# life too. Captured before the flush, replayed after it.
+DOCKER_DNS_RULES="$(iptables-save -t nat | grep '127\.0\.0\.11' || true)"
+
 # Start from a clean slate so re-running is idempotent. Policies must go back
 # to ACCEPT *before* the flush: -F removes the ACCEPT rules but keeps the DROP
 # policies, and the resolution phase below needs working DNS and HTTPS. The
@@ -98,6 +108,17 @@ iptables -t mangle -F
 iptables -t mangle -X
 ipset destroy "${SET_NAME}" 2>/dev/null || true
 ipset create "${SET_NAME}" hash:net
+
+# Only the 127.0.0.11 rules go back, not the whole nat table: restoring it
+# wholesale would also reinstate anything else that had accumulated there. The
+# two chains are recreated first because -X deleted them along with the rules
+# that referenced them.
+if [[ -n "${DOCKER_DNS_RULES}" ]]; then
+    iptables -t nat -N DOCKER_OUTPUT 2>/dev/null || true
+    iptables -t nat -N DOCKER_POSTROUTING 2>/dev/null || true
+    echo "${DOCKER_DNS_RULES}" | xargs -L 1 iptables -t nat
+    echo "init-firewall: restored Docker embedded-DNS rules"
+fi
 
 # GitHub publishes its ranges, which is more durable than resolving the
 # hostnames: git operations land on addresses a single A record never sees.
