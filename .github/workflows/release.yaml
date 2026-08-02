@@ -10,7 +10,7 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write   # the action pushes a feature_<id>_<version> tag
       packages: write
     steps:
       - uses: actions/checkout@v4
