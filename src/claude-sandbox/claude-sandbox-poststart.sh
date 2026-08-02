@@ -23,6 +23,15 @@ FIREWALL=on
 CONFIG_DIR="${CLAUDE_CONFIG_DIR:-${HOME}/.claude}"
 CONFIG_JSON="${CONFIG_DIR}/.claude.json"
 
+# Some Docker daemons (GitHub's runners among them) hand out the state volume
+# root-owned rather than inheriting the mount point's ownership from the
+# image. The helper is sudoers-scoped and takes no arguments — it chowns
+# exactly /claude-state to exactly the build-time user.
+if [[ "${CONFIG_DIR}" == "/claude-state" && ! -w "${CONFIG_DIR}" && "${EUID}" -ne 0 ]]; then
+    sudo -n /usr/local/bin/claude-sandbox-own-state || \
+        echo "claude-sandbox: WARNING ${CONFIG_DIR} is not writable and could not be repaired" >&2
+fi
+
 # The wizard runs whenever .claude.json is absent, and it asks you to pick a
 # login method *without ever consulting CLAUDE_CODE_OAUTH_TOKEN* — so a
 # correctly forwarded token still lands you on a sign-in screen. Seeding the

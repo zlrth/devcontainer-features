@@ -83,6 +83,18 @@ fi
 install -m 0755 "${FEATURE_DIR}/init-firewall.sh" /usr/local/bin/init-firewall.sh
 install -m 0755 "${FEATURE_DIR}/claude-sandbox-poststart.sh" /usr/local/bin/claude-sandbox-poststart
 
+# Whether a named volume seeded from an empty image directory inherits that
+# directory's ownership varies by Docker daemon: Docker Desktop preserves it,
+# the daemon on GitHub's runners leaves the volume root-owned. This helper
+# lets the poststart repair the ownership without widening sudo: the target
+# and owner are baked in here at build time, so there is nothing for a caller
+# to smuggle in.
+printf '%s\n' \
+    '#!/bin/bash' \
+    "exec chown -R ${USERNAME} ${STATE_DIR}" \
+    > /usr/local/bin/claude-sandbox-own-state
+chmod 0755 /usr/local/bin/claude-sandbox-own-state
+
 # ----------------------------------------------------------------- sudoers --
 # The firewall is the one thing that needs root, and it is the only thing this
 # entry grants. Deliberately not blanket NOPASSWD: an agent that can sudo
@@ -96,6 +108,7 @@ if [[ "${USERNAME}" != "root" ]]; then
     printf '%s\n' \
         'Defaults env_keep += "EXTRA_ALLOWED_DOMAINS"' \
         "${USERNAME} ALL=(root) NOPASSWD: /usr/local/bin/init-firewall.sh" \
+        "${USERNAME} ALL=(root) NOPASSWD: /usr/local/bin/claude-sandbox-own-state" \
         > /etc/sudoers.d/claude-sandbox-firewall
     chmod 0440 /etc/sudoers.d/claude-sandbox-firewall
     visudo -cf /etc/sudoers.d/claude-sandbox-firewall >/dev/null
