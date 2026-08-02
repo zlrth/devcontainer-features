@@ -1,0 +1,33 @@
+{
+  "firewall_off": {
+    "image": "mcr.microsoft.com/devcontainers/base:bookworm",
+    "remoteUser": "vscode",
+    "features": {
+      "claude-sandbox": {
+        "firewall": false
+      }
+    }
+  },
+  "allowed_domains": {
+    "image": "mcr.microsoft.com/devcontainers/base:bookworm",
+    "remoteUser": "vscode",
+    "features": {
+      "claude-sandbox": {
+        "allowedDomains": "example.com, repo.clojars.org",
+        "githubRanges": false,
+        "permissionMode": "bypassPermissions",
+        "acceptBypassPermissions": true,
+        "restrictSudo": false,
+        "theme": "light"
+      }
+    }
+  },
+  "root_user": {
+    "image": "debian:bookworm",
+    "features": {
+      "claude-sandbox": {
+        "installUtilities": false
+      }
+    }
+  }
+}

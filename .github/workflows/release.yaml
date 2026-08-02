@@ -1,0 +1,25 @@
+name: Release features
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [src/**]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Publish to GHCR
+        uses: devcontainers/action@v1
+        with:
+          publish-features: "true"
+          base-path-to-features: "./src"
+          generate-docs: "false"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

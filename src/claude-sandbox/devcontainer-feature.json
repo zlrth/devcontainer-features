@@ -1,0 +1,97 @@
+{
+  "id": "claude-sandbox",
+  "version": "1.0.0",
+  "name": "Claude Code sandbox (default-deny egress + persistent auth)",
+  "description": "Installs Claude Code, a default-deny egress firewall, and a persistent state volume, so that running the agent with --dangerously-skip-permissions has a bounded blast radius.",
+  "documentationURL": "https://github.com/zlrth/devcontainer-features/tree/main/src/claude-sandbox",
+  "licenseURL": "https://github.com/zlrth/devcontainer-features/blob/main/LICENSE",
+  "keywords": ["claude", "claude-code", "firewall", "egress", "sandbox", "agent"],
+
+  "options": {
+    "firewall": {
+      "type": "boolean",
+      "default": true,
+      "description": "Lock egress down to the allowlist at container start. Turning this off leaves the container with open networking: the filesystem is still contained, but anything readable is exfiltratable."
+    },
+    "allowedDomains": {
+      "type": "string",
+      "default": "",
+      "proposals": [
+        "repo1.maven.org repo.clojars.org",
+        "registry.npmjs.org",
+        "pypi.org files.pythonhosted.org",
+        "crates.io static.crates.io",
+        "proxy.golang.org sum.golang.org"
+      ],
+      "description": "Extra domains to allow, space- or comma-separated. These are your toolchain's hosts: package registries, mirrors, internal services. Anthropic's own hosts are always allowed."
+    },
+    "githubRanges": {
+      "type": "boolean",
+      "default": true,
+      "description": "Allow GitHub's published IP ranges, fetched from api.github.com/meta. More durable than resolving the hostnames, because git operations land on addresses a single A record never sees."
+    },
+    "installClaudeCode": {
+      "type": "boolean",
+      "default": true,
+      "description": "Install Claude Code with the native installer. Turn off if the base image already carries it."
+    },
+    "version": {
+      "type": "string",
+      "default": "stable",
+      "proposals": ["stable", "latest"],
+      "description": "Which Claude Code build to install: 'stable', 'latest', or an exact x.y.z version."
+    },
+    "installUtilities": {
+      "type": "boolean",
+      "default": true,
+      "description": "Install the tools Claude Code reaches for rather than shelling out: ripgrep, git, jq, less, procps, unzip."
+    },
+    "seedOnboarding": {
+      "type": "boolean",
+      "default": true,
+      "description": "Pre-answer the first-run wizard and trust the workspace folder, so a --rm run goes straight to the prompt instead of a login screen."
+    },
+    "permissionMode": {
+      "type": "string",
+      "default": "acceptEdits",
+      "enum": ["default", "acceptEdits", "plan", "bypassPermissions"],
+      "description": "Default permission mode seeded into settings.json. acceptEdits auto-approves file edits but still asks before running commands; bypassPermissions asks nothing (pair it with acceptBypassPermissions)."
+    },
+    "acceptBypassPermissions": {
+      "type": "boolean",
+      "default": false,
+      "description": "Pre-accept the --dangerously-skip-permissions warning, for sessions launched in bypass mode. Off by default: the seeded default is acceptEdits, which never shows that warning."
+    },
+    "restrictSudo": {
+      "type": "boolean",
+      "default": true,
+      "description": "Remove blanket NOPASSWD sudo grants the base image gave the remote user (devcontainers/base images grant NOPASSWD:ALL), leaving only the firewall entry. Without this, the agent can sudo iptables -F and the egress rules are decorative."
+    },
+    "theme": {
+      "type": "string",
+      "default": "dark",
+      "enum": ["dark", "light", "dark-daltonized", "light-daltonized", "dark-ansi", "light-ansi"],
+      "description": "Claude Code theme to seed."
+    }
+  },
+
+  "capAdd": ["NET_ADMIN", "NET_RAW"],
+
+  "mounts": [
+    {
+      "source": "claude-sandbox-state-${devcontainerId}",
+      "target": "/claude-state",
+      "type": "volume"
+    }
+  ],
+
+  "containerEnv": {
+    "CLAUDE_CONFIG_DIR": "/claude-state"
+  },
+
+  "postStartCommand": "/usr/local/bin/claude-sandbox-poststart",
+
+  "installsAfter": [
+    "ghcr.io/devcontainers/features/common-utils"
+  ]
+}
